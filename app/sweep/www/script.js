@@ -6,7 +6,9 @@ function connectWebSocket(spectrum) {
 
     //ws = new WebSocket("ws://" + window.location.host + ":7681/waterfall");
     //ws = new WebSocket("ws://" + window.location.hostname + ":8000/waterfall");
-    ws = new WebSocket("wss://" + window.location.hostname + "/waterfall");
+//    ws = new WebSocket("wss://" + window.location.hostname + "/waterfall");
+    ws = new WebSocket("ws://192.168.0.188:8000/waterfall");
+
     //ws = new WebSocket("ws://10.0.0.105:7681/waterfall");
     spectrum.setWebSocket(ws);
 
@@ -74,7 +76,7 @@ function handleMIDIMessage(event) {
 // Fonction pour accéder aux périphériques MIDI
 function accessMIDIDevices(midiAccess) {
     const midiStatus = document.getElementById('midiStatus');
-    
+
 
     // Écouter les événements MIDI pour chaque entrée MIDI
     const inputs = midiAccess.inputs.values();
@@ -86,7 +88,7 @@ function accessMIDIDevices(midiAccess) {
 // Fonction pour gérer les erreurs lors de l'accès aux périphériques MIDI
 function onMIDIFailure() {
     const midiStatus = document.getElementById('midiStatus');
-   
+
     console.error('Échec de l\'accès aux périphériques MIDI.');
 }
 
@@ -106,22 +108,22 @@ function main() {
     window.addEventListener("keydown", function (e) {
         spectrum.onKeypress(e);
     });
-    window.addEventListener('wheel',function (e)  
+    window.addEventListener('wheel',function (e)
     {
         spectrum.handleMouseWheel(e);
-    });    
-    window.addEventListener('mousedown',function (e)  
+    });
+    window.addEventListener('mousedown',function (e)
     {
         spectrum.handleMouseDown(e);
-    });   
-    window.addEventListener('mouseup',function (e)  
+    });
+    window.addEventListener('mouseup',function (e)
     {
         spectrum.handleMouseUp(e);
-    });   
-    window.addEventListener('mousemove',function (e)  
+    });
+    window.addEventListener('mousemove',function (e)
     {
         spectrum.handleMouseMove(e);
-    });  
+    });
 
    // FIXME : NEED HTTPS !!!!!
     if (navigator.requestMIDIAccess) {
