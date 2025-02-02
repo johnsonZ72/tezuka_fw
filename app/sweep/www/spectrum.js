@@ -41,7 +41,7 @@ Spectrum.prototype.addWaterfallRow = function(bins) {
     if (this.wfrowcount % 100 == 0)
     {
         var timeString = new Date().toLocaleTimeString();
-        this.ctx_wf.font = "30px sans-serif";
+        this.ctx_wf.font = "15px sans-serif";
         this.ctx_wf.fillStyle = "white";
         this.ctx_wf.textBaseline = "top";
         this.ctx_wf.fillText(timeString, 0, 0); // TODO: Fix font scaling
@@ -59,11 +59,11 @@ Spectrum.prototype.addWaterfallRow = function(bins) {
         this.xoffset, 0, this.wf_size/this.zoom, rows,
         0, this.spectrumHeight, width, height - this.spectrumHeight);
     */
-        this.ctx.setTransform((this.zoom) ,0,0,1,this.pos-this.xoffset*this.zoom,0);
-        this.ctx.drawImage(this.ctx_wf.canvas,
-            0, 0,  this.wf_size, rows,
-            0, this.spectrumHeight, this.wf_size, height - this.spectrumHeight);
-            this.ctx.setTransform(1,0,0,1,0,0);
+    this.ctx.setTransform((this.zoom) ,0,0,1,this.pos-this.xoffset*this.zoom,0);
+    this.ctx.drawImage(this.ctx_wf.canvas,
+        0, 0,  this.wf_size, rows,
+        0, this.spectrumHeight, this.wf_size, height - this.spectrumHeight);
+    this.ctx.setTransform(1,0,0,1,0,0);
     //    this.ctx.setTransform((this.zoom) ,0,0,1,this.pos-this.xoffset*this.zoom,0);
 }
 
@@ -138,7 +138,7 @@ Spectrum.prototype.drawSpectrum = function(bins) {
     //this.xoffset= (this.wf_size/(2*this.zoom));
     //this.ctx.translate(-this.xoffset, this.yoffset);
 
-   //this.ctx.scale((width*this.zoom) / this.wf_size, 1);
+    //this.ctx.scale((width*this.zoom) / this.wf_size, 1);
     //this.ctx.translate(-(this.xoffset), this.yoffset);
 
     //this.ctx.setTransform((width*this.zoom) / this.wf_size,0,0,1,-(this.xoffset),0);
@@ -185,6 +185,8 @@ Spectrum.prototype.updateInfo = function(x) {
     this.ctx_InfoFrequency.textAlign = "left";
 
     var freq = (((this.Screentobin(x)-this.wf_size/2)/this.wf_size*this.NativeSpan)+this.orginalfreq);
+    this.lastPointerFreq = freq;
+
     if (this.centerHz + this.spanHz > 1e6)
         freq = (freq / 1e6).toFixed(3) + "M";
     else if (this.centerHz + this.spanHz/this.zoom > 1e3)
@@ -261,7 +263,7 @@ Spectrum.prototype.addData = function(data) {
     //this.databin = new Float32Array(data);
     if (!this.paused) {
         for (let i = 0; i < fspectrum.length; i++) {
-            // Convertir l'élément en entier non signé 16 bits et le stocker dans le tableau Uint16Array
+            // Convertir l'Ã©lÃ©ment en entier non signÃ© 16 bits et le stocker dans le tableau Uint16Array
             this.databin[i] = Math.log(fspectrum[i])*100;
         }
         if (this.databin.length != this.wf_size) {
@@ -302,7 +304,7 @@ Spectrum.prototype.addData1 = function(data) {
 
     if (!this.paused) {
         for (let i = 0; i < fspectrum.length; i++) {
-            // Convertir l'élément en entier non signé 16 bits et le stocker dans le tableau Uint16Array
+            // Convertir l'Ã©lÃ©ment en entier non signÃ© 16 bits et le stocker dans le tableau Uint16Array
             this.databin[i+fspectrum.length*this.oldsweep] = Math.log(fspectrum[i])*100;
         }
         if (this.databin.length != this.wf_size) {
@@ -593,15 +595,33 @@ Spectrum.prototype.toggleFullscreen = function() {
     }
 }
 
-Spectrum.prototype.zoomin= function()
-{
-    this.spanHz = (this.spanHz *this.zoom);
-    this.zoom = this.zoom+1;
-    //this.spanHz = (this.spanHz /this.zoom);
-    this.setSpanHz((this.spanHz /this.zoom));
+Spectrum.prototype.zoomin = function() {
+    // Пример: увеличиваем коэффициент масштабирования
+    // (в вашем коде сначала делается this.spanHz = this.spanHz * this.zoom, потом zoom увеличивается)
+    // Здесь можно выбрать схему изменения zoom, например:
+    let oldZoom = this.zoom;
+    this.zoom = this.zoom + 5;  // или другой коэффициент изменения
 
-    //this.setCenterHz(this.centerHz-(this.spanHz /2));
-}
+    // Пересчитываем spanHz относительно нового zoom (пример, как у вас вычислялось)
+    let newSpan = this.spanHz * (oldZoom / this.zoom);
+    this.setSpanHz(newSpan);
+    // Теперь вычисляем бин, соответствующий lastPointerFreq
+    let xBin = this.wf_size/2 + ((this.lastPointerFreq - this.orginalfreq) / this.NativeSpan) * this.wf_size;
+
+    // Вычисляем текущую позицию этой точки на экране до коррекции
+    let screenPos = this.Bintoscreen(xBin);
+
+    // Желаемая позиция – центр канваса:
+    let centerScreen = this.canvas.width / 2;
+
+    // Определяем разницу и корректируем смещение this.pos
+    let delta = centerScreen - screenPos;
+    this.pos += delta;
+
+    // Если нужно, можно обновить отображение осей/графика после изменения параметров
+    this.setCenterHz(this.lastPointerFreq); // если требуется обновление осей
+};
+
 
 
 Spectrum.prototype.zoomout= function()
@@ -627,7 +647,7 @@ Spectrum.prototype.scaleat = function(at, amount)
         this.pos = at - (at - this.pos) * amount;
         //console.log("Original "+this.NativeSpan+" Span "+this.NativeSpan*(this.Screentobin(this.canvas.width)-this.Screentobin(0))/this.wf_size);
 
-       this.setSpanHz(this.NativeSpan*(this.Screentobin(this.canvas.width)-this.Screentobin(0))/this.wf_size);
+        this.setSpanHz(this.NativeSpan*(this.Screentobin(this.canvas.width)-this.Screentobin(0))/this.wf_size);
         this.setCenterHz(((this.Screentobin(this.canvas.width/2)-this.wf_size/2)/this.wf_size*this.NativeSpan)+this.orginalfreq);
         //console.log("Freq "+((this.Screentobin(this.canvas.width/2)-this.wf_size/2)/this.wf_size*this.NativeSpan)+this.orginalfreq);
     }
@@ -652,12 +672,12 @@ Spectrum.prototype.UpdateXOffset= function(x)
         this.xoffset=this.pos/this.zoom;
     else
     if(this.Screentobin(this.canvas.width)>this.wf_size)
-        {
-            this.xoffset-=x;
-            //console.log("Limite "+this.Bintoscreen(this.pos)+" "+this.Bintoscreen(this.wf_size));
-            //this.xoffset=this.Screentobin(this.pos/this.zoom);
-        }
-        //this.xoffset=this.pos+this.wf_size;
+    {
+        this.xoffset-=x;
+        //console.log("Limite "+this.Bintoscreen(this.pos)+" "+this.Bintoscreen(this.wf_size));
+        //this.xoffset=this.Screentobin(this.pos/this.zoom);
+    }
+    //this.xoffset=this.pos+this.wf_size;
     else
         this.xoffset+=x;
 
@@ -753,12 +773,12 @@ Spectrum.prototype.handleMouseWheel = function(e)
 
 
     if(e.deltaY<0)
-        {
+    {
         //this.zoomin();
         //this.scaleat(e.offsetX,1.2);
         this.scaleat(e.offsetX,1.2);
         //this.xoffset=e.OffsetX;
-        }
+    }
     if(e.deltaY>0)
     {
 
@@ -797,14 +817,15 @@ Spectrum.prototype.handleMouseMove = function(e)
 
 function Spectrum(id, options) {
     // Handle options
-    this.centerHz = (options && options.centerHz) ? options.centerHz : 600e6;
+    this.centerHz = (options && options.centerHz) ? options.centerHz : 750e6;
     this.orginalfreq = this.centerHz;
-    this.spanHz = (options && options.spanHz) ? options.spanHz : 1100e6;
+    this.lastPointerFreq = this.centerHz;
+    this.spanHz = (options && options.spanHz) ? options.spanHz : 700e6;
     this.NativeSpan=this.spanHz;
     this.gain = (options && options.gain) ? options.gain : 0;
     this.fps = (options && options.fps) ? options.fps : 0;
     this.wf_size = (options && options.wf_size) ? options.wf_size : 0;
-    this.wf_rows = (options && options.wf_rows) ? options.wf_rows : 2048;
+    this.wf_rows = (options && options.wf_rows) ? options.wf_rows : 4096;
     this.spectrumPercent = (options && options.spectrumPercent) ? options.spectrumPercent : 25;
     this.spectrumPercentStep = (options && options.spectrumPercentStep) ? options.spectrumPercentStep : 5;
     this.averaging = (options && options.averaging) ? options.averaging : 0;
@@ -816,8 +837,8 @@ function Spectrum(id, options) {
     // Setup state
     this.paused = false;
     this.fullscreen = false;
-    this.min_db = 600;
-    this.max_db = 2500;
+    this.min_db = 700;
+    this.max_db = 3500;
     this.spectrumHeight = 0;
     this.tuningStep = 100000;
     this.maxbinval = 0;
@@ -826,7 +847,7 @@ function Spectrum(id, options) {
 
     // Colors
     this.colorindex = 0;
-    this.colormap = colormaps[2];
+    this.colormap = colormaps[0];
 
     // Create main canvas and adjust dimensions to match actual
     this.canvas = document.getElementById(id);
@@ -854,7 +875,7 @@ function Spectrum(id, options) {
     this.InfoFrequency.width = this.canvas.width;
     this.ctx_InfoFrequency = this.axes.getContext("2d");
 
-    this.zoom=1;
+    this.zoom=0.37;
     this.mouseisdown=0;
     this.xoffset=0;
     this.yoffset=0;
